@@ -7,24 +7,36 @@
         body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f4f9; }
         .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         input { padding: 10px; width: 40%; margin-right: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        
+        /* Botão Padrão (Café) */
         button { padding: 10px 20px; background: #6f4e37; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:hover { background: #5a3e2b; }
-        button.delete { background: #ff4444; padding: 5px 10px; margin-left: 10px; }
+        
+        /* Botão Deletar (Vermelho) */
+        button.delete { background: #ff4444; padding: 5px 10px; margin-left: 5px; }
+        button.delete:hover { background: #cc0000; }
+
+        /* NOVO: Botão Editar (Azul) */
+        button.edit { background: #007bff; padding: 5px 10px; margin-left: 10px; }
+        button.edit:hover { background: #0056b3; }
+        
         li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Ajuste para agrupar botões */
+        .actions { display: flex; align-items: center; }
     </style>
 </head>
 <body>
     <h1>☕ Painel Administrativo CoffeeTech</h1>
 
-    <!-- ÁREA DE CADASTRO -->
     <div class="card">
-        <h3>Novo Cliente</h3>
-        <input type="text" id="nome" placeholder="Nome Completo">
+        <h3>Gerenciar Cliente</h3>
+        <input type="hidden" id="idUsuario"> <input type="text" id="nome" placeholder="Nome Completo">
         <input type="email" id="email" placeholder="E-mail">
-        <button onclick="salvarUsuario()">Cadastrar</button>
+        <button id="btnSalvar" onclick="salvarUsuario()">Cadastrar</button>
+        <button id="btnCancelar" onclick="resetarFormulario()" style="background: #999; display: none;">Cancelar</button>
     </div>
 
-    <!-- ÁREA DE LISTAGEM -->
     <div class="card">
         <h3>Lista de Interessados</h3>
         <ul id="lista">Carregando...</ul>
@@ -33,7 +45,7 @@
     <script>
         const API_URL = 'http://localhost:3000/usuarios';
 
-        // 1. Função para carregar a lista (READ)
+        // 1. Carregar Lista (READ)
         async function carregarLista() {
             const resposta = await fetch(API_URL);
             const usuarios = await resposta.json();
@@ -44,31 +56,71 @@
                 const li = document.createElement('li');
                 li.innerHTML = `
                     <span><strong>${user.nome}</strong> (${user.email})</span>
-                    <button class="delete" onclick="deletarUsuario(${user.id})">Remover</button>
+                    <div class="actions">
+                        <button class="edit" onclick="prepararEdicao('${user.id}', '${user.nome}', '${user.email}')">Editar</button>
+                        
+                        <button class="delete" onclick="deletarUsuario('${user.id}')">Remover</button>
+                    </div>
                 `;
                 lista.appendChild(li);
             });
         }
 
-        // 2. Função para salvar (CREATE)
+        // 2. Salvar (CREATE ou UPDATE)
         async function salvarUsuario() {
+            const id = document.getElementById('idUsuario').value;
             const nome = document.getElementById('nome').value;
             const email = document.getElementById('email').value;
 
             if(!nome || !email) return alert('Preencha tudo!');
 
-            await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nome, email })
-            });
+            const dados = { nome, email };
 
-            document.getElementById('nome').value = '';
-            document.getElementById('email').value = '';
-            carregarLista(); // Recarrega a lista para mostrar o novo
+            if (id) {
+                // SE TEM ID, É EDIÇÃO (PUT)
+                await fetch(`${API_URL}/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+            } else {
+                // SE NÃO TEM ID, É NOVO CADASTRO (POST)
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+            }
+
+            resetarFormulario();
+            carregarLista();
         }
 
-        // 3. Função para deletar (DELETE)
+        // 3. Preparar Edição (Joga dados para o input)
+        function prepararEdicao(id, nome, email) {
+            document.getElementById('idUsuario').value = id;
+            document.getElementById('nome').value = nome;
+            document.getElementById('email').value = email;
+            
+            // Muda visualmente o botão principal
+            document.getElementById('btnSalvar').innerText = 'Atualizar';
+            document.getElementById('btnSalvar').style.background = '#007bff'; // Azul
+            document.getElementById('btnCancelar').style.display = 'inline-block';
+        }
+
+        // 4. Resetar Formulário (Limpa tudo)
+        function resetarFormulario() {
+            document.getElementById('idUsuario').value = '';
+            document.getElementById('nome').value = '';
+            document.getElementById('email').value = '';
+            
+            // Volta botão ao normal
+            document.getElementById('btnSalvar').innerText = 'Cadastrar';
+            document.getElementById('btnSalvar').style.background = '#6f4e37'; // Café
+            document.getElementById('btnCancelar').style.display = 'none';
+        }
+
+        // 5. Deletar (DELETE)
         async function deletarUsuario(id) {
             if(confirm('Tem certeza que deseja remover este cliente?')) {
                 await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
@@ -76,7 +128,6 @@
             }
         }
 
-        // Inicia carregando a lista
         carregarLista();
     </script>
 </body>

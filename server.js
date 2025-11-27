@@ -49,6 +49,24 @@ app.delete('/usuarios/:id', async (req, res) => {
   }
 });
 
+// 4. ATUALIZAÇÃO (PUT/EDITAR) - Adicionado com segurança
+app.put('/usuarios/:id', async (req, res) => {
+  const { id } = req.params;
+  const { nome, email } = req.body;
+  
+  try {
+    // Atualiza nome e email onde o ID for igual ao enviado
+    await connection.query(
+        'UPDATE usuarios SET nome = ?, email = ? WHERE id = ?', 
+        [nome, email, id]
+    );
+    res.send('Usuário atualizado com sucesso!');
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Erro ao atualizar usuário');
+  }
+});
+
 // --- INICIALIZAÇÃO ---
 
 const startServer = async () => {
@@ -57,8 +75,8 @@ const startServer = async () => {
   
   app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-    console.log(`📡 Painel Admin disponível em http://localhost:${PORT}/admin.html`);
+    // console.log(`📡 Painel Admin disponível em http://localhost:${PORT}/admin.html`);
   });
-};git
+};
 
 startServer();
